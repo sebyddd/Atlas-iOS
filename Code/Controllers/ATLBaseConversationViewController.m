@@ -118,7 +118,6 @@ static CGFloat const ATLMaxScrollDistanceFromBottom = 150;
         [self updateTopCollectionViewInset];
     }
     [self updateBottomCollectionViewInset];
-    NSLog(@"View appeared");
     [self.messageInputToolbar becomeFirstResponder];
 }
 

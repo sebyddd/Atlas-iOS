@@ -92,7 +92,7 @@ NSInteger const kATLSharedCellTag = 1000;
     _messageTextFont = [UIFont systemFontOfSize:17];
     _messageTextColor = [UIColor blackColor];
     _messageLinkTextColor = [UIColor whiteColor];
-    _messageTextCheckingTypes = NSTextCheckingTypeLink | NSTextCheckingTypePhoneNumber;
+    _messageTextCheckingTypes = NSTextCheckingTypeLink;
     _imageProcessingConcurrentQueue = dispatch_queue_create(ATLMessageCollectionViewCellImageProcessingConcurrentQueue, DISPATCH_QUEUE_CONCURRENT);
     [self.bubbleView updateProgressIndicatorWithProgress:0.0 visible:NO animated:NO];
 }
@@ -128,8 +128,17 @@ NSInteger const kATLSharedCellTag = 1000;
 
 - (void)configureBubbleViewForTextContent
 {
-    LYRMessagePart *messagePart = self.message.parts.firstObject;
-    NSString *text = [[NSString alloc] initWithData:messagePart.data encoding:NSUTF8StringEncoding];
+    NSMutableString *text = [[NSMutableString alloc] initWithString:@""];
+    for (LYRMessagePart *eachPart in self.message.parts) {
+        if ([eachPart.MIMEType isEqualToString:@"application/json+voya"])
+            continue;
+        
+        NSString *subText = [[NSString alloc] initWithData:[eachPart data] encoding:NSUTF8StringEncoding];
+        if (!subText)
+            // Trying to decode with ASCII, since UTF-8 failed
+            subText = [[NSString alloc] initWithData:[eachPart data] encoding:NSASCIIStringEncoding];
+        [text appendString:subText];
+    }
     [self.bubbleView updateWithAttributedText:[self attributedStringForText:text]];
     [self.bubbleView updateProgressIndicatorWithProgress:0.0 visible:NO animated:NO];
     self.accessibilityLabel = [NSString stringWithFormat:@"Message: %@", text];
@@ -424,14 +433,26 @@ NSInteger const kATLSharedCellTag = 1000;
 
 + (CGSize)cellSizeForTextMessage:(LYRMessage *)message inView:(id)view
 {
+    if ([[self sharedHeightCache] objectForKey:message.identifier]) {
+        return [[[self sharedHeightCache] objectForKey:message.identifier] CGSizeValue];
+    }
     //  Adding  the view to the hierarchy so that UIAppearance property values will be set based on containment.
     ATLMessageCollectionViewCell *cell = [self sharedCell];
     if (![view viewWithTag:kATLSharedCellTag]) {
         [view addSubview:cell];
     }
     
-    LYRMessagePart *part = message.parts.firstObject;
-    NSString *text = [[NSString alloc] initWithData:part.data encoding:NSUTF8StringEncoding];
+    NSMutableString *text = [[NSMutableString alloc] initWithString:@""];
+    for (LYRMessagePart *eachPart in message.parts) {
+        if ([eachPart.MIMEType isEqualToString:@"application/json+voya"])
+            continue;
+        
+        NSString *subText = [[NSString alloc] initWithData:[eachPart data] encoding:NSUTF8StringEncoding];
+        if (!subText)
+            // Trying to decode with ASCII, since UTF-8 failed
+            subText = [[NSString alloc] initWithData:[eachPart data] encoding:NSASCIIStringEncoding];
+        [text appendString:subText];
+    }
     UIFont *font = [[[self class] appearance] messageTextFont];
     if (!font) {
         font = cell.messageTextFont;
@@ -459,6 +480,10 @@ NSInteger const kATLSharedCellTag = 1000;
         if (!imagePart) {
             // If no preview image part found, resort to the full-resolution image.
             imagePart = ATLMessagePartForMIMEType(message, ATLMIMETypeImageJPEG);
+        }
+        if (!imagePart) {
+            // If no preview image part found for JPEG, resort to the full-resolution PNG image.
+            imagePart = ATLMessagePartForMIMEType(message, ATLMIMETypeImagePNG);
         }
         // Resort to image's size, if no dimensions metadata message parts found.
         if ((imagePart.transferStatus == LYRContentTransferComplete) ||

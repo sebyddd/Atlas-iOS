@@ -194,13 +194,21 @@ LYRMessage *ATLMessageForParts(LYRClient *layerClient, NSArray *messageParts, NS
     defaultConfiguration.sound = pushSound;
     defaultConfiguration.category = ATLUserNotificationDefaultActionsCategoryIdentifier;
     
-    LYRMessageOptions *messageOptions = [LYRMessageOptions new];
-    messageOptions.pushNotificationConfiguration = defaultConfiguration;
+    NSDictionary *payload = @{
+                              @"device" : @"ios",
+                              @"version" : [[NSBundle mainBundle] objectForInfoDictionaryKey: (NSString *)kCFBundleVersionKey]
+                              };
+    LYRMessagePart *voyaPart = [LYRMessagePart messagePartWithMIMEType:@"application/json+voya" data:[NSKeyedArchiver archivedDataWithRootObject:payload]];
+    NSMutableArray *cMessageParts = [NSMutableArray arrayWithArray:messageParts];
+    [cMessageParts addObject:voyaPart];
+    
+    NSDictionary *options = @{ LYRMessageOptionsPushNotificationConfigurationKey: defaultConfiguration };
     NSError *error;
-    LYRMessage *message = [layerClient newMessageWithParts:messageParts options:messageOptions error:&error];
+    LYRMessage *message = [layerClient newMessageWithParts:cMessageParts options:options error:&error];
     if (error) {
         return nil;
     }
+    
     return message;
 }
 
@@ -344,19 +352,12 @@ NSArray *ATLTextCheckingResultsForText(NSString *text, NSTextCheckingType linkTy
 
 NSBundle *ATLResourcesBundle(void)
 {
-    // CocoaPods resource bundle
     NSBundle *bundlePath = [NSBundle bundleWithIdentifier:@"org.cocoapods.Atlas"];
     NSString *path = [bundlePath pathForResource:@"AtlasResource" ofType:@"bundle"];
     NSBundle *resourcesBundle = [NSBundle bundleWithPath:path];
     if (resourcesBundle) {
         return resourcesBundle;
     }
-    // Carthage resources
-    NSBundle *atlasBundle = [NSBundle bundleWithIdentifier:@"com.layer.Atlas"];
-    if (atlasBundle) {
-        return atlasBundle;
-    }
-    
     NSString *resourcesBundlePath = [[NSBundle mainBundle] pathForResource:@"AtlasResource" ofType:@"bundle"];
     if (resourcesBundlePath) {
         return [NSBundle bundleWithPath:resourcesBundlePath];

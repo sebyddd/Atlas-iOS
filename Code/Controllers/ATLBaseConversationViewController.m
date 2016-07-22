@@ -42,7 +42,7 @@ static CGFloat const ATLMaxScrollDistanceFromBottom = 150;
 
 - (id)init
 {
-    self = [super initWithNibName:nil bundle:nil];
+    self = [super init];
     if (self) {
         [self baseCommonInit];
     }
@@ -118,6 +118,8 @@ static CGFloat const ATLMaxScrollDistanceFromBottom = 150;
         [self updateTopCollectionViewInset];
     }
     [self updateBottomCollectionViewInset];
+    NSLog(@"View appeared");
+    [self.messageInputToolbar becomeFirstResponder];
 }
 
 - (void)viewDidAppear:(BOOL)animated

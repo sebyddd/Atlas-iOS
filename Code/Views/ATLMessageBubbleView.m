@@ -84,7 +84,7 @@ typedef NS_ENUM(NSInteger, ATLBubbleViewContentType) {
         [_bubbleViewLabel setContentCompressionResistancePriority:UILayoutPriorityDefaultHigh + 1 forAxis:UILayoutConstraintAxisHorizontal];
         [self addSubview:_bubbleViewLabel];
         
-        _textCheckingTypes = NSTextCheckingTypeLink | NSTextCheckingTypePhoneNumber;
+        _textCheckingTypes = NSTextCheckingTypeLink;
         
         _bubbleImageView = [[UIImageView alloc] init];
         _bubbleImageView.translatesAutoresizingMaskIntoConstraints = NO;

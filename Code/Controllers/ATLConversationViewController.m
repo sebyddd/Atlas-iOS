@@ -265,8 +265,8 @@ static NSInteger const ATLPhotoActionSheet = 1000;
 - (void)configureControllerForConversation
 {
     // Configure avatar image display
-    NSMutableSet *otherParticipantIDs = [[self.conversation.participants valueForKey:@"userID"] mutableCopy];
-    if (self.layerClient.authenticatedUser) [otherParticipantIDs removeObject:self.layerClient.authenticatedUser.userID];
+    NSMutableSet *otherParticipantIDs = [self.conversation.participants mutableCopy];
+    if (self.layerClient.authenticatedUser) [otherParticipantIDs removeObject:self.layerClient.authenticatedUser];
     self.shouldDisplayAvatarItem = (otherParticipantIDs.count > 1) ? YES : self.shouldDisplayAvatarItemForOneOtherParticipant;
     
     // Configure message bar button enablement
@@ -593,13 +593,13 @@ static NSInteger const ATLPhotoActionSheet = 1000;
 - (void)messageInputToolbarDidType:(ATLMessageInputToolbar *)messageInputToolbar
 {
     if (!self.conversation) return;
-    [self.conversation sendTypingIndicator:LYRTypingIndicatorActionBegin];
+    [self.conversation sendTypingIndicator:LYRTypingDidBegin];
 }
 
 - (void)messageInputToolbarDidEndTyping:(ATLMessageInputToolbar *)messageInputToolbar
 {
     if (!self.conversation) return;
-    [self.conversation sendTypingIndicator:LYRTypingIndicatorActionFinish];
+    [self.conversation sendTypingIndicator:LYRTypingDidFinish];
 }
 
 #pragma mark - Message Sending
@@ -782,12 +782,14 @@ static NSInteger const ATLPhotoActionSheet = 1000;
     if (!self.conversation) return;
     if (!notification.object) return;
     if (![notification.object isEqual:self.conversation]) return;
-
-    LYRTypingIndicator *typingIndicator = notification.userInfo[LYRTypingIndicatorObjectUserInfoKey];
-    if (typingIndicator.action == LYRTypingIndicatorActionBegin) {
-        [self.typingParticipantIDs addObject:typingIndicator.sender.userID];
+    
+    NSString *participantID = notification.userInfo[LYRTypingIndicatorParticipantUserInfoKey];
+    NSNumber *statusNumber = notification.userInfo[LYRTypingIndicatorValueUserInfoKey];
+    LYRTypingIndicator status = statusNumber.unsignedIntegerValue;
+    if (status == LYRTypingDidBegin) {
+        [self.typingParticipantIDs addObject:participantID];
     } else {
-        [self.typingParticipantIDs removeObject:typingIndicator.sender.userID];
+        [self.typingParticipantIDs removeObject:participantID];
     }
     [self updateTypingIndicatorOverlay:YES];
 }
@@ -811,7 +813,7 @@ static NSInteger const ATLPhotoActionSheet = 1000;
     }
 }
 
-- (void)handleApplicationDidBecomeActive:(NSNotification *)notification
+- (void)handleApplicationWillEnterForeground:(NSNotification *)notification
 {
     if (self.conversation && self.marksMessagesAsRead) {
         NSError *error;
@@ -1161,9 +1163,9 @@ static NSInteger const ATLPhotoActionSheet = 1000;
     conversation = [self existingConversationWithParticipantIdentifiers:participantIdentifiers];
     if (conversation) return conversation;
     
-    LYRConversationOptions *conversationOptions = [LYRConversationOptions new];
-    conversationOptions.deliveryReceiptsEnabled = participants.count <= 5;
-    conversation = [self.layerClient newConversationWithParticipants:participantIdentifiers options:conversationOptions error:nil];
+    BOOL deliveryReceiptsEnabled = participants.count <= 5;
+    NSDictionary *options = @{LYRConversationOptionsDeliveryReceiptsEnabledKey: @(deliveryReceiptsEnabled)};
+    conversation = [self.layerClient newConversationWithParticipants:participantIdentifiers options:options error:nil];
     return conversation;
 }
 
@@ -1331,7 +1333,7 @@ static NSInteger const ATLPhotoActionSheet = 1000;
     NSString *participantName;
     if (message.sender.userID) {
         id<ATLParticipant> participant = [self participantForIdentity:message.sender];
-        participantName = participant.displayName ?: ATLLocalizedString(@"atl.conversation.participant.unknown.key", @"Unknown User", nil);
+        participantName = participant.displayName ?: ATLLocalizedString(@" ", @" ", nil);
     } else {
         participantName = message.sender.displayName;
     }
@@ -1347,7 +1349,7 @@ static NSInteger const ATLPhotoActionSheet = 1000;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(layerClientObjectsDidChange:) name:LYRClientObjectsDidChangeNotification object:nil];
     
     // Application State Notifications
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleApplicationDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleApplicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
 }
 
 @end

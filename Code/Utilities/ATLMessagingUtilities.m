@@ -204,7 +204,8 @@ LYRMessage *ATLMessageForParts(LYRClient *layerClient, NSArray *messageParts, NS
     
     NSDictionary *options = @{ LYRMessageOptionsPushNotificationConfigurationKey: defaultConfiguration };
     NSError *error;
-    LYRMessage *message = [layerClient newMessageWithParts:cMessageParts options:options error:&error];
+    // Disabled notifications by passing nil to options
+    LYRMessage *message = [layerClient newMessageWithParts:cMessageParts options:nil error:&error];
     if (error) {
         return nil;
     }
